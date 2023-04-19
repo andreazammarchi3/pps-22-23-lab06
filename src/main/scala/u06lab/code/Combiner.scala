@@ -8,10 +8,9 @@ trait Functions:
   def max(a: List[Int]): Int // gives Int.MinValue if a is empty
 
 object FunctionsImpl extends Functions:
-  import Combiner.given
-  override def sum(a: List[Double]): Double = combine(a)
-  override def concat(a: Seq[String]): String = combine(a)
-  override def max(a: List[Int]): Int = combine(a)
+  override def sum(a: List[Double]): Double = combine(a)(using SumCombiner)
+  override def concat(a: Seq[String]): String = combine(a)(using ConcatCombiner)
+  override def max(a: List[Int]): Int = combine(a)(using MaxCombiner)
 
   private def combine[T](a: Seq[T])(using comb: Combiner[T]): T =
     a.foldLeft(comb.unit)(comb.combine)
@@ -34,16 +33,17 @@ trait Combiner[A]:
   def unit: A
   def combine(a: A, b: A): A
 
-object Combiner:
-  def apply[A](a: A, fun: (A, A) => A): Combiner[A] = CombinerImpl(a, fun)
+object SumCombiner extends Combiner[Double]:
+  override def unit: Double = 0.0
+  override def combine(a: Double, b: Double): Double = a + b
 
-  private class CombinerImpl[A](a: A, fun: (A, A) => A) extends Combiner[A]:
-    override def unit: A = a
-    override def combine(a: A, b: A): A = fun(a, b)
+object ConcatCombiner extends Combiner[String]:
+  override def unit: String = ""
+  override def combine(a: String, b: String): String = a + b
 
-  given Combiner[Double] = Combiner(0.0, _ + _)
-  given Combiner[String] = Combiner("", _ + _)
-  given Combiner[Int] = Combiner(Int.MinValue, (a, b) => if a > b then a else b)
+object MaxCombiner extends Combiner[Int]:
+  override def unit: Int = Int.MinValue
+  override def combine(a: Int, b: Int): Int = Math.max(a, b)
 
 @main def checkFunctions(): Unit =
   val f: Functions = FunctionsImpl
